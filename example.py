@@ -1,8 +1,6 @@
 import numpy as np
 
-from stl.Monitor import STLMonitorBuilder
-from stl.RobSemantics import RobSemantics
-from stl.TimeSeries import TimeSeries
+from simplemonitor.stl import STLMonitorBuilder, RobSemantics, TimeSeries
 
 timeSeries = TimeSeries(['P', 'Q'],  # variables
                         np.array([0, 1, 2, 3, 4]),  # timesteps

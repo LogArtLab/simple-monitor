@@ -1,6 +1,6 @@
-from stl import TimeSeries
-from stl.STLParser import STLParser
-from stl.STLVisitor import STLVisitor
+from simplemonitor.stl.STLParser import STLParser
+from simplemonitor.stl.STLVisitor import STLVisitor
+from simplemonitor.stl.Signal import TimeSeries
 
 
 class Semantics(STLVisitor):

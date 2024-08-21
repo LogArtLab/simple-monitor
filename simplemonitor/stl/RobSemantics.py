@@ -1,6 +1,6 @@
-from stl.STLParser import STLParser
+from simplemonitor.stl.STLParser import STLParser
 
-from stl.Semantics import Semantics
+from simplemonitor.stl.Semantics import Semantics
 
 
 class RobSemantics(Semantics):

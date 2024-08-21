@@ -1,8 +1,8 @@
 from antlr4 import InputStream, CommonTokenStream
 
-from stl import Semantics
-from stl.STLLexer import STLLexer
-from stl.STLParser import STLParser
+from simplemonitor.stl import Semantics
+from simplemonitor.stl.STLLexer import STLLexer
+from simplemonitor.stl.STLParser import STLParser
 
 
 class Monitor:
