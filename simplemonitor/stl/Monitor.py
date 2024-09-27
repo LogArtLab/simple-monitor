@@ -5,7 +5,7 @@ from simplemonitor.stl.STLLexer import STLLexer
 from simplemonitor.stl.STLParser import STLParser
 
 
-class Monitor:
+class OfflineMonitor:
 
     def __init__(self, prog_context: STLParser.ProgContext):
         self.prog_context = prog_context
@@ -14,14 +14,23 @@ class Monitor:
         return semantics.visit(self.prog_context)
 
 
-class STLMonitorBuilder:
+class STLOfflineMonitorBuilder:
 
     def __init__(self, formula):
         self.formula = formula
 
-    def build(self) -> Monitor:
+    def build(self) -> OfflineMonitor:
         expr = InputStream(self.formula + '\n')
         lexer = STLLexer(input=expr)
         token_stream = CommonTokenStream(lexer)
         parser = STLParser(token_stream)
-        return Monitor(parser.prog())
+        return OfflineMonitor(parser.prog())
+
+
+class OnlineMonitor:
+
+    def __init__(self, prog_context: STLParser.ProgContext):
+        self.prog_context = prog_context
+
+    def monitor(self, semantics: Semantics):
+        return semantics.visit(self.prog_context)

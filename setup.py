@@ -12,6 +12,5 @@ setup(
     author='Simone Silvetti',
     author_email='simone.silvetti@gmail.com',
     url="https://github.com/LogArtLab/simple-monitor",
-    packages=['simplemonitor'],
     install_requires=['antlr4-python3-runtime', 'numpy'],  # external packages as dependencies
 )
