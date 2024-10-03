@@ -1,4 +1,4 @@
-from simplemonitor.mrl.locations import World
+from old.locations import World
 from simplemonitor.mrl.nodes import Reducer
 from simplemonitor.mrl.utility import BufferedObserver
 

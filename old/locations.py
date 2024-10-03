@@ -1,3 +1,5 @@
+from typing import List
+
 from simplemonitor.mrl.nodes import SpatialReducerNode, Notifier, UnaryNode, BinaryNode, TemporalReducerNode, Window
 
 
@@ -42,7 +44,7 @@ class Location:
         self.__add_computation_to(node, to_variable)
 
     def add_spatial_reducer_node_computation(self, reducer, condition, from_variable, to_variable):
-        locations = self.world.get_good_location_from(self, condition)
+        locations = self.world.get_locations_satisfying_condition(from_location=self, condition=condition)
         node = SpatialReducerNode(reducer)
         node.add(self, from_variable)
         for location in locations:
@@ -97,7 +99,7 @@ class World:
         for location in self.locations.values():
             location.add_spatial_reducer_node_computation(reducer_generator(), condition, from_variable, to_variable)
 
-    def get_good_location_from(self, from_location, condition):
+    def get_good_location_from(self, from_location, condition) -> List[Location]:
         good_locations = []
         for location in self.locations.values():
             if condition(location, from_location):

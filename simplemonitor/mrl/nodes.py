@@ -1,3 +1,8 @@
+from typing import Tuple
+
+from simplemonitor.mrl.functions import Polynomial
+
+
 class Notifier:
 
     def __init__(self):
@@ -11,37 +16,7 @@ class Notifier:
             observer(time, value)
 
 
-class UnaryNode(Notifier):
 
-    def __init__(self, operator):
-        super().__init__()
-        self.left = None
-        self.right = None
-        self.operator = operator
-
-    def receive(self, time, value):
-        self.notify(time, self.operator(value))
-
-
-class BinaryNode(Notifier):
-
-    def __init__(self, operator):
-        super().__init__()
-        self.left = None
-        self.right = None
-        self.operator = operator
-
-    def receive_left(self, time, value):
-        self.left = [time, value]
-        if self.right:
-            self.right[0] = time
-            self.notify(time, self.operator(value, self.right[1]))
-
-    def receive_right(self, time, value):
-        self.right = [time, value]
-        if self.left:
-            self.left[0] = time
-            self.notify(time, self.operator(value, self.left[1]))
 
 
 class WindowObserver:
@@ -218,3 +193,5 @@ class SpatialReducerNode(Notifier):
 
     def __should_notify(self):
         return None not in self.storage.values()
+
+
