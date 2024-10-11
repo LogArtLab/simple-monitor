@@ -1,9 +1,10 @@
 # INTERVAL
+
 import pytest
 
 from simplemonitor.mrl.functions import Polynomial
 from simplemonitor.mrl.mrl import Interval, Integral, IntegralNode, WindowInterval, UnaryNode, BinaryNode, Memory, \
-    mean_polynomial, NaryNode
+    mean_polynomial, NaryNode, Min
 
 
 # INTERVAL TESTS
@@ -49,6 +50,63 @@ def test_apply_binary_operator():
 
     expected_interval = Interval(1, 2, Polynomial.constant(6))
     assert expected_interval == actual_interval
+
+
+def test_min_interval_left_constant():
+    left = Interval(1, 2, Polynomial.constant(3))
+    right = Interval(1, 2, Polynomial.constant(4))
+
+    min_interval = left.min_interval(right)
+
+    assert min_interval == [left, ]
+
+
+def test_min_interval_right_constant():
+    left = Interval(1, 2, Polynomial.constant(4))
+    right = Interval(1, 2, Polynomial.constant(3))
+
+    min_interval = left.min_interval(right)
+
+    assert min_interval == [right, ]
+
+
+def test_min_interval_right_linear():
+    left = Interval(1, 2, Polynomial.linear(1, 0))
+    right = Interval(1, 2, Polynomial.linear(-1, 3))
+
+    min_interval = left.min_interval(right)
+
+    assert min_interval == [Interval(1, 1.5, Polynomial.linear(1, 0)), Interval(1.5, 2, Polynomial.linear(-1, 3))]
+
+
+def test_min_interval_same_interval():
+    left = Interval(1, 2, Polynomial.linear(1, 0))
+    right = Interval(1, 2, Polynomial.linear(1, 0))
+
+    min_interval = left.min_interval(right)
+
+    assert min_interval == [right, ]
+
+
+def test_min_interval_polynomial_with_no_zeros():
+    left = Interval(1, 2, Polynomial.full(1, 0, 0))
+    right = Interval(1, 2, Polynomial.linear(1, -.1))
+
+    min_interval = left.min_interval(right)
+
+    assert min_interval == [right, ]
+
+
+def test_min_interval_polynomial_with_zeros():
+    left = Interval(0, 1, Polynomial.full(1, 0, 0))
+    right = Interval(0, 1, Polynomial.linear(1, -.1))
+
+    min_interval = left.min_interval(right)
+
+    assert min_interval == [Interval(0.0, 0.1127016653792583, Polynomial.linear(1, -0.1)),
+                            Interval(0.1127016653792583, 0.8872983346207417, Polynomial.full(1, 0, 0)),
+                            Interval(0.8872983346207417, 1.0, Polynomial.linear(1, -0.1)),
+                            ]
 
 
 # INTEGRAL TESTS
@@ -176,3 +234,58 @@ def test_mean_polynomial():
     mean = mean_polynomial(intervals)
 
     assert mean == Interval(1, 2, Polynomial.constant(1.5))
+
+
+# TEST MIN
+def test_move_with_constants():
+    min_operator = Min()
+    first_interval = Interval(1, 2, Polynomial.constant(4))
+    second_interval = Interval(2, 3, Polynomial.constant(3))
+    third_interval = Interval(3, 4, Polynomial.constant(2))
+    min_operator.add(first_interval)
+    min_operator.add(second_interval)
+
+    minimum = min_operator.move(first_interval, third_interval)
+
+    assert minimum == [Interval(1, 2, Polynomial.constant(2)), ]
+
+
+def test_move_with_functions():
+    min_operator = Min()
+    first_interval = Interval(1, 2, Polynomial.linear(1, 1))
+    second_interval = Interval(2, 3, Polynomial.constant(1.5))
+    third_interval = Interval(3, 4, Polynomial.constant(1))
+    fourth_interval = Interval(4, 5, Polynomial.constant(2))
+    min_operator.add(first_interval)
+    min_operator.add(second_interval)
+    min_operator.add(third_interval)
+
+    minimum = min_operator.move(first_interval, fourth_interval)
+
+    assert minimum == [Interval(1, 2, Polynomial.constant(1)), ]
+
+
+def test_move_with_functions_version():
+    min_operator = Min()
+    first_interval = Interval(1, 2, Polynomial.linear(1, 1))
+    second_interval = Interval(2, 3, Polynomial.constant(1.5))
+    third_interval = Interval(3, 4, Polynomial.constant(1))
+    min_operator.add(first_interval)
+    min_operator.add(second_interval)
+
+    minimum = min_operator.move(first_interval, third_interval)
+
+    assert minimum == [Interval(1, 2, Polynomial.constant(1)), ]
+
+
+def test_move_with_functions_and_zeros():
+    min_operator = Min()
+    first_interval = Interval(1, 2, Polynomial.linear(1, 1))
+    second_interval = Interval(2, 3, Polynomial.constant(2.7))
+    third_interval = Interval(3, 4, Polynomial.constant(3))
+    min_operator.add(first_interval)
+    min_operator.add(second_interval)
+
+    minimum = min_operator.move(first_interval, third_interval)
+
+    assert minimum == [Interval(1, 1.7, Polynomial.linear(1, 1)), Interval(1.7, 2.0, Polynomial.constant(2.7))]

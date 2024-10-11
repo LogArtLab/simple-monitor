@@ -2,6 +2,12 @@ from typing import Tuple, List
 
 from simplemonitor.mrl.functions import Polynomial
 
+EPS = 1e-5
+
+
+def are_numerically_equivalent(a, b):
+    return abs(a - b) < EPS
+
 
 class Interval:
 
@@ -31,7 +37,10 @@ class Interval:
         return Interval(self.start, self.end, self.function - other.function)
 
     def __eq__(self, other: 'Interval'):
-        return (self.start, self.end) == (other.start, other.end) and self.function == other.function
+        return (are_numerically_equivalent(self.start, other.start)
+                and are_numerically_equivalent(self.end, other.end)
+                and self.function == other.function
+                )
 
     def integrate(self) -> float:
         integral_function = self.function.integral()
@@ -44,8 +53,14 @@ class Interval:
         delta = self.start - interval.start
         return Interval(interval.start, interval.end, self.function.move(delta))
 
+    def project_onto(self, other: 'Interval'):
+        if self.start > other.start or self.end < other.end:
+            raise Exception("Cannot project onto bigger intervals")
+        return Interval(other.start, other.end, self.function)
+
     def zeros(self, interval: 'Interval'):
-        return (self.function - interval.function).zeros()
+        zeros = (self.function - interval.function).zeros()
+        return [zero for zero in zeros if self.start <= zero <= self.end]
 
     def apply_operator(self, operator) -> 'Interval':
         return Interval(self.start, self.end, operator(self.function))
@@ -54,6 +69,43 @@ class Interval:
         if (self.start, self.end) != (other.start, other.end):
             raise Exception("Cannot apply binary operator between intervals with different bounds")
         return Interval(self.start, self.end, operator(self.function, other.function))
+
+    def get_extreme_value(self) -> Tuple[float, float]:
+        return self.function(self.start), self.function(self.end)
+
+    def is_increasing(self):
+        left_value, right_value = self.get_extreme_value()
+        return left_value < right_value
+
+    def is_decreasing(self):
+        left_value, right_value = self.get_extreme_value()
+        return right_value < left_value
+
+    def is_constant(self):
+        left_value, right_value = self.get_extreme_value()
+        return right_value == left_value
+
+    def min_interval(self, other) -> List['Interval']:
+        if (self.start, self.end) != (other.start, other.end):
+            raise Exception("Cannot apply binary operator between intervals with different bounds")
+        self_extreme = self.get_extreme_value()
+        other_extreme = other.get_extreme_value()
+        zeros = self.zeros(other)
+        if not zeros:
+            if self_extreme[0] <= other_extreme[0]:
+                return [self, ]
+            else:
+                return [other, ]
+        min_interval = list()
+        extended_zeros = [self.start, ] + zeros + [self.end, ]
+        functions = [self.function, other.function]
+        if self_extreme[0] <= other_extreme[0]:
+            for i in range(len(extended_zeros) - 1):
+                min_interval.append(Interval(extended_zeros[i], extended_zeros[i + 1], functions[i % 2]))
+        else:
+            for i in range(len(extended_zeros) - 1):
+                min_interval.append(Interval(extended_zeros[i], extended_zeros[i + 1], functions[(i + 1) % 2]))
+        return min_interval
 
 
 class IntervalNotifier:
@@ -202,10 +254,10 @@ class Integral:
 
     def move(self, removed: Interval, added: Interval):
         added_above = added.move_above(removed)
-        zero = removed.zeros(added_above)[0]
-        if zero is not None and removed.end > zero > removed.start:
-            removed_left, removed_right = removed.split(zero)
-            added_above_left, added_above_right = added_above.split(zero)
+        zeros = removed.zeros(added_above)
+        if zeros and removed.end > zeros[0] > removed.start:
+            removed_left, removed_right = removed.split(zeros[0])
+            added_above_left, added_above_right = added_above.split(zeros[0])
             left = added_above_left.integral() - (removed_left.integral()) + Interval(removed_left.start,
                                                                                       removed_left.end,
                                                                                       Polynomial.constant(
@@ -220,6 +272,90 @@ class Integral:
             return (added_above.integral() - (removed.integral()) + Interval(removed.start, removed.end,
                                                                              Polynomial.constant(
                                                                                  self.value)),)
+
+
+class Min:
+
+    def __init__(self):
+        self.min = float('inf')
+        self.values = []
+
+    def add(self, interval: Interval):
+        new_values = interval.get_extreme_value()
+        self.values.append(new_values[0])
+        self.values.append(new_values[1])
+        self.min = min(self.min, min(new_values))
+
+    def move(self, removed: Interval, added: Interval):
+        other_minimum = min(self.values[2:])
+        constant_interval = Interval(removed.start, removed.end, Polynomial.constant(other_minimum))
+        added_shifted = added.move_above(removed)
+        min_intervals = []
+        first_chunk_intervals = removed.min_interval(constant_interval)
+        for interval in first_chunk_intervals:
+            min_intervals.extend(interval.min_interval(added_shifted.project_onto(interval)))
+        return min_intervals
+
+    def move_old(self, removed: Interval, added: Interval):
+        added_left, added_right = added.get_extreme_value()
+        removed_left, removed_right = removed.get_extreme_value()
+        if self.min < min(removed_left, removed_right) and self.min < min(added_left, added_right):
+            self.values.pop(0)
+            self.values.pop(0)
+            self.values.append(added_left)
+            self.values.append(added_right)
+            self.min = min(self.min, min(added_left, added_right))
+            return Interval(removed.start, removed.end, Polynomial.constant(self.min))
+        if self.min == removed_left and removed_right < min(added_left, added_right):
+            other_minimum = min(self.values[1:])
+            self.values.pop(0)
+            self.values.pop(0)
+            self.values.append(added_left)
+            self.values.append(added_right)
+            self.min = min(self.values)
+            if other_minimum == removed_right:
+                return removed
+            else:
+                return removed.min_interval(Interval(removed.start, removed.end, Polynomial.constant(other_minimum)))
+
+        if self.min == removed_left and removed_right > min(added_left, added_right):
+            # TBD problem.
+            self.values.pop(0)
+            self.values.pop(0)
+            self.values.append(added_left)
+            self.values.append(added_right)
+            self.min = min(self.values)
+            return removed
+        if self.min == removed_right and self.min < min(added_left, added_right):
+            self.values.pop(0)
+            self.values.pop(0)
+            self.values.append(added_left)
+            self.values.append(added_right)
+            self.min = min(self.values)
+            return Interval(removed.start, removed.end, Polynomial.constant(removed_right))
+        if self.min > max(added_left, added_right):
+            self.values.pop(0)
+            self.values.pop(0)
+            self.values.append(added_left)
+            self.values.append(added_right)
+            self.min = min(self.values)
+            if added_left < added_right:
+                return Interval(removed.start, removed.end, added.function)
+            else:
+                return Interval(removed.start, removed.end, Polynomial.constant(added_right))
+        if (self.min < min(removed_left, removed_right) or self.min == removed_right) and min(added_left,
+                                                                                              added_right) < self.min < max(
+            added_left,
+            added_right):
+            zero = (Polynomial.constant(self.min) - added.function).zeros()[0]  # PASS
+            if added_left < added_right:
+                return Interval(removed.start, zero, added.function), Interval(zero, removed.end,
+                                                                               Polynomial.constant(self.min))
+            else:
+                return Interval(removed.start, zero, Polynomial.constant(self.min)), Interval(zero, removed.end,
+                                                                                              added.function)
+        if self.min == removed_left and min(added_left, added_right) < self.min < max(added_left, added_right):
+            pass
 
 
 class IntegralNode(IntervalNotifier):

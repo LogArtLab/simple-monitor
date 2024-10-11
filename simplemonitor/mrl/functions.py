@@ -1,6 +1,6 @@
 import math
 import numbers
-from typing import Tuple
+from typing import Tuple, List
 
 
 class Polynomial:
@@ -54,17 +54,17 @@ class Polynomial:
     def move(self, delta) -> 'Polynomial':
         return Polynomial(self.a, 2 * self.a * delta + self.b, self.a * delta * delta + self.b * delta + self.c)
 
-    def zeros(self) -> Tuple[float | None, ...]:
+    def zeros(self) -> List:
         if self.a == 0 and self.b == 0:
-            return (None,)
+            return []
         if self.a == 0 and self.b != 0:
-            return (-self.c / self.b,)
+            return [-self.c / self.b, ]
         else:
             delta = self.b * self.b - 4 * self.a * self.c
             if delta >= 0:
-                return (-self.b - math.sqrt(delta)) / (2 * self.a), (-self.b + math.sqrt(delta)) / (2 * self.a)
+                return [(-self.b - math.sqrt(delta)) / (2 * self.a), (-self.b + math.sqrt(delta)) / (2 * self.a)]
             else:
-                return (None,)
+                return []
 
 
 class UndefinedFunction(Polynomial):
