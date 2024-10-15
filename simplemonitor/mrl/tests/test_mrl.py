@@ -3,8 +3,9 @@
 import pytest
 
 from simplemonitor.mrl.functions import Polynomial
-from simplemonitor.mrl.mrl import Interval, Integral, IntegralNode, WindowInterval, UnaryNode, BinaryNode, Memory, \
-    mean_polynomial, NaryNode, Min
+from simplemonitor.mrl.utility import mean_polynomial
+from simplemonitor.mrl.nodes import IntegralNode, UnaryNode, BinaryNode, NaryNode
+from simplemonitor.mrl.elements import Interval, Memory, Integral, WindowInterval, Min
 
 
 # INTERVAL TESTS

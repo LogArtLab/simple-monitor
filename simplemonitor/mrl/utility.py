@@ -1,16 +1,13 @@
-class BufferedObserver:
+from typing import List
 
-    def __init__(self, observer):
-        self.observer = observer
-        self.values = dict()
+from simplemonitor.mrl.elements import Interval
+from simplemonitor.mrl.functions import Polynomial
 
-    def receive(self, location_name, variable, time, value):
-        if (location_name, variable) in self.values:
-            data = self.values[(location_name, variable)]
-            if data["time"] != time:
-                self.observer(location_name, variable, data["time"], data["value"])
-                self.values[(location_name, variable)] = {"time": time, "value": value}
-            else:
-                self.values[(location_name, variable)]["value"] = value
-        else:
-            self.values[(location_name, variable)] = {"time": time, "value": value}
+
+def mean_polynomial(interval: List[Interval]):
+    result = interval[0]
+    n = len(interval)
+    for i in range(1, n):
+        result = result + interval[i]
+    rf = result.function
+    return Interval(result.start, result.end, Polynomial(rf.a / n, rf.b / n, rf.c / n))
