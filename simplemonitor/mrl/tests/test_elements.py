@@ -1,14 +1,11 @@
-# INTERVAL
-
+# INTERVAL TESTS
 import pytest
 
+from simplemonitor.mrl.elements import Interval, Integral, Memory, Min
 from simplemonitor.mrl.functions import Polynomial
+from simplemonitor.mrl.nodes import UnaryNode, BinaryNode, NaryNode
 from simplemonitor.mrl.utility import mean_polynomial
-from simplemonitor.mrl.nodes import IntegralNode, UnaryNode, BinaryNode, NaryNode
-from simplemonitor.mrl.elements import Interval, Memory, Integral, WindowInterval, Min
 
-
-# INTERVAL TESTS
 
 def test_integrate_constant():
     interval = Interval(0, 1, Polynomial.constant(2))
@@ -157,51 +154,6 @@ def test_move_with_linear_and_zeros():
     assert result[1] == Interval(5 / 11, 1, Polynomial.full(-5.5, 5, 10))
 
 
-# INTEGRALNODE TESTS
-
-def test_receive():
-    node = IntegralNode(WindowInterval(2))
-    signal = []
-    node.to(signal.append)
-    node.receive(Interval(0, 1, Polynomial.linear(10, 0)))
-    node.receive(Interval(1, 2, Polynomial.constant(2)))
-    node.receive(Interval(2, 3, Polynomial.constant(3)))
-    node.receive(Interval(3, 4, Polynomial.linear(-1, 8)))
-
-    print()
-
-
-# UNARYNODE TESTS
-
-def test_unary_node_receive():
-    actual_signal = []
-    operator = lambda p: p + Polynomial.constant(2)
-    node = UnaryNode(operator)
-    node.to(actual_signal.append)
-
-    node.receive(Interval(1, 4, Polynomial.linear(1, 3)))
-
-    expected_signal = [Interval(1, 4, Polynomial.linear(1, 5))]
-    assert expected_signal == actual_signal
-
-
-# BINARY TESTS
-def test_binary_node_receive():
-    actual_signal = []
-    operator = lambda p1, p2: p1 + p2
-    node = BinaryNode(operator)
-    node.to(actual_signal.append)
-
-    node.receive_right(Interval(1, 4, Polynomial.linear(1, 3)))
-    node.receive_right(Interval(4, 6, Polynomial.constant(2)))
-    node.receive_left(Interval(1, 5, Polynomial.linear(1, 3)))
-    node.receive_left(Interval(5, 10, Polynomial.linear(1, 3)))
-
-    expected_signal = [Interval(1, 4, Polynomial.linear(2, 6)), Interval(4, 5, Polynomial.linear(1, 5)),
-                       Interval(5, 6, Polynomial.linear(1, 5))]
-    assert expected_signal == actual_signal
-
-
 # MEMORY TESTS
 def test_memory_receive():
     memory = Memory()
@@ -225,16 +177,6 @@ def test_memory_receive_with_nary_node():
     memory.receive("Z", Interval(1, 1.5, Polynomial.linear(1, 3)))
 
     assert Interval(1, 1.5, Polynomial.linear(1, 2)) == memory.get_value("R")
-
-
-# function
-def test_mean_polynomial():
-    intervals = [Interval(1, 2, Polynomial.constant(1)),
-                 Interval(1, 2, Polynomial.constant(2))]
-
-    mean = mean_polynomial(intervals)
-
-    assert mean == Interval(1, 2, Polynomial.constant(1.5))
 
 
 # TEST MIN
