@@ -3,7 +3,6 @@
 from simplemonitor.mrl.elements import Interval, WindowInterval
 from simplemonitor.mrl.functions import Polynomial
 from simplemonitor.mrl.nodes import IntegralNode, UnaryNode, BinaryNode
-from simplemonitor.mrl.utility import mean_polynomial
 
 
 # INTEGRALNODE TESTS

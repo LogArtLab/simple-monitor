@@ -56,15 +56,20 @@ class Polynomial:
 
     def zeros(self) -> List:
         if self.a == 0 and self.b == 0:
-            return []
+            return list()
         if self.a == 0 and self.b != 0:
             return [-self.c / self.b, ]
         else:
             delta = self.b * self.b - 4 * self.a * self.c
-            if delta >= 0:
-                return [(-self.b - math.sqrt(delta)) / (2 * self.a), (-self.b + math.sqrt(delta)) / (2 * self.a)]
+            if delta > 0:
+                if self.a > 0:
+                    return [(-self.b - math.sqrt(delta)) / (2 * self.a), (-self.b + math.sqrt(delta)) / (2 * self.a)]
+                else:
+                    return [(-self.b + math.sqrt(delta)) / (2 * self.a), (-self.b - math.sqrt(delta)) / (2 * self.a)]
+            elif delta == 0:
+                return [-self.b / (2 * self.a), ]
             else:
-                return []
+                return list()
 
 
 class UndefinedFunction(Polynomial):

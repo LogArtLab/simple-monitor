@@ -86,7 +86,35 @@ class Interval:
         left_value, right_value = self.get_extreme_value()
         return right_value == left_value
 
-    def min_interval(self, other) -> List['Interval']:
+    def min_interval(self, other):
+        if (self.start, self.end) != (other.start, other.end):
+            raise Exception("Cannot compute the minimum interval of intervals with different bounds")
+        self_left_value, self_right_value = self.get_extreme_value()
+        other_left_value, other_right_value = other.get_extreme_value()
+        zeros = self.zeros(other)
+        if not zeros:
+            if self_left_value < other_left_value:
+                return [self, ]
+            else:
+                return [other, ]
+        extended_zeros = []
+        if self.start not in zeros:
+            extended_zeros += [self.start, ] + zeros
+        else:
+            extended_zeros.extend(zeros)
+        if self.end not in zeros:
+            extended_zeros.append(self.end)
+        min_interval = []
+        for i in range(len(extended_zeros) - 1):
+            mid_point = (extended_zeros[i] + extended_zeros[i + 1]) / 2
+            if self.function(mid_point) < other.function(mid_point):
+                function = self.function
+            else:
+                function = other.function
+            min_interval.append(Interval(extended_zeros[i], extended_zeros[i + 1], function))
+        return min_interval
+
+    def min_interval_old(self, other) -> List['Interval']:
         if (self.start, self.end) != (other.start, other.end):
             raise Exception("Cannot apply binary operator between intervals with different bounds")
         self_extreme = self.get_extreme_value()
@@ -98,7 +126,12 @@ class Interval:
             else:
                 return [other, ]
         min_interval = list()
-        extended_zeros = [self.start, ] + zeros + [self.end, ]
+        if self.start != zeros[0]:
+            extended_zeros = [self.start, ] + zeros
+        else:
+            extended_zeros = zeros
+        if self.end != zeros[-1]:
+            extended_zeros = extended_zeros + [self.end, ]
         functions = [self.function, other.function]
         if self_extreme[0] <= other_extreme[0]:
             for i in range(len(extended_zeros) - 1):
@@ -145,36 +178,6 @@ class Memory:
             self.add_computation(from_variable,
                                  lambda interval, variable=from_variable: node.receive(variable, interval))
         node.to(lambda interval: self.receive(to_variable, interval))
-
-
-class Integral:
-    def __init__(self):
-        super().__init__()
-        self.value = 0
-
-    def add(self, interval: Interval):
-        self.value += interval.integrate()
-
-    def move(self, removed: Interval, added: Interval):
-        added_above = added.move_above(removed)
-        zeros = removed.zeros(added_above)
-        if zeros and removed.end > zeros[0] > removed.start:
-            removed_left, removed_right = removed.split(zeros[0])
-            added_above_left, added_above_right = added_above.split(zeros[0])
-            left = added_above_left.integral() - (removed_left.integral()) + Interval(removed_left.start,
-                                                                                      removed_left.end,
-                                                                                      Polynomial.constant(
-                                                                                          self.value))
-            right = added_above_right.integral() - (removed_right.integral()) + Interval(removed_right.start,
-                                                                                         removed_right.end,
-                                                                                         Polynomial.constant(
-                                                                                             self.value))
-            return left, right
-
-        else:
-            return (added_above.integral() - (removed.integral()) + Interval(removed.start, removed.end,
-                                                                             Polynomial.constant(
-                                                                                 self.value)),)
 
 
 class WindowInterval(WindowIntervalNotifier):
@@ -229,7 +232,45 @@ class WindowInterval(WindowIntervalNotifier):
             self.notify_move(to_be_removed, to_be_added)
 
 
-class Min:
+class WindowOperator:
+    def add(self, interval: Interval):
+        pass
+
+    def move(self, removed: Interval, added: Interval):
+        pass
+
+
+class Integral(WindowOperator):
+    def __init__(self):
+        super().__init__()
+        self.value = 0
+
+    def add(self, interval: Interval):
+        self.value += interval.integrate()
+
+    def move(self, removed: Interval, added: Interval):
+        added_above = added.move_above(removed)
+        zeros = removed.zeros(added_above)
+        if zeros and removed.end > zeros[0] > removed.start:
+            removed_left, removed_right = removed.split(zeros[0])
+            added_above_left, added_above_right = added_above.split(zeros[0])
+            left = added_above_left.integral() - (removed_left.integral()) + Interval(removed_left.start,
+                                                                                      removed_left.end,
+                                                                                      Polynomial.constant(
+                                                                                          self.value))
+            right = added_above_right.integral() - (removed_right.integral()) + Interval(removed_right.start,
+                                                                                         removed_right.end,
+                                                                                         Polynomial.constant(
+                                                                                             self.value))
+            return left, right
+
+        else:
+            return (added_above.integral() - (removed.integral()) + Interval(removed.start, removed.end,
+                                                                             Polynomial.constant(
+                                                                                 self.value)),)
+
+
+class Min(WindowOperator):
 
     def __init__(self):
         self.min = float('inf')
@@ -242,11 +283,14 @@ class Min:
         self.min = min(self.min, min(new_values))
 
     def move(self, removed: Interval, added: Interval):
-        other_minimum = min(self.values[2:])
-        constant_interval = Interval(removed.start, removed.end, Polynomial.constant(other_minimum))
-        added_shifted = added.move_above(removed)
+        if len(self.values) > 2:
+            other_minimum = min(self.values[2:])
+            constant_interval = Interval(removed.start, removed.end, Polynomial.constant(other_minimum))
+            first_chunk_intervals = removed.min_interval(constant_interval)
+        else:
+            first_chunk_intervals = [removed, ]
         min_intervals = []
-        first_chunk_intervals = removed.min_interval(constant_interval)
+        added_shifted = added.move_above(removed)
         for interval in first_chunk_intervals:
             min_intervals.extend(interval.min_interval(added_shifted.project_onto(interval)))
         return min_intervals

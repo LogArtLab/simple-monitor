@@ -1,4 +1,4 @@
-from simplemonitor.mrl.elements import Interval, Integral, WindowInterval
+from simplemonitor.mrl.elements import Interval, Integral, WindowInterval, Min, WindowOperator
 from simplemonitor.mrl.functions import Polynomial
 from simplemonitor.mrl.notifiers import IntervalNotifier
 
@@ -58,25 +58,6 @@ class BinaryNode(IntervalNotifier):
             self.__merge()
 
 
-class IntegralNode(IntervalNotifier):
-    def __init__(self, window: WindowInterval):
-        super().__init__()
-        window.to(self)
-        self.window = window
-        self.integral = Integral()
-
-    def add(self, interval: Interval):
-        self.integral.add(interval)
-
-    def move(self, removed: Interval, added: Interval):
-        results = self.integral.move(removed, added)
-        for result in results:
-            self.notify(result)
-
-    def receive(self, interval: Interval):
-        self.window.add(interval)
-
-
 class NaryNode(IntervalNotifier):
 
     def __init__(self, operator):
@@ -124,3 +105,60 @@ class NaryNode(IntervalNotifier):
             else:
                 cut.append(l.pop(0))
         self.notify(self.operator(cut))
+
+
+class WindowNode(IntervalNotifier):
+    def __init__(self, window: WindowInterval, window_operator: WindowOperator):
+        super().__init__()
+        window.to(self)
+        self.window = window
+        self.window_operator = window_operator
+
+    def add(self, interval: Interval):
+        self.window_operator.add(interval)
+
+    def move(self, removed: Interval, added: Interval):
+        results = self.window_operator.move(removed, added)
+        for result in results:
+            self.notify(result)
+
+    def receive(self, interval: Interval):
+        self.window.add(interval)
+
+
+class IntegralNode(IntervalNotifier):
+    def __init__(self, window: WindowInterval):
+        super().__init__()
+        window.to(self)
+        self.window = window
+        self.integral = Integral()
+
+    def add(self, interval: Interval):
+        self.integral.add(interval)
+
+    def move(self, removed: Interval, added: Interval):
+        results = self.integral.move(removed, added)
+        for result in results:
+            self.notify(result)
+
+    def receive(self, interval: Interval):
+        self.window.add(interval)
+
+
+class MinNode(IntervalNotifier):
+    def __init__(self, window: WindowInterval):
+        super().__init__()
+        window.to(self)
+        self.window = window
+        self.min = Min()
+
+    def add(self, interval: Interval):
+        self.min.add(interval)
+
+    def move(self, removed: Interval, added: Interval):
+        results = self.min.move(removed, added)
+        for result in results:
+            self.notify(result)
+
+    def receive(self, interval: Interval):
+        self.window.add(interval)
