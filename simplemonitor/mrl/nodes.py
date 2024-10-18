@@ -1,4 +1,4 @@
-from simplemonitor.mrl.elements import Interval, Integral, WindowInterval, Min, WindowOperator
+from simplemonitor.mrl.elements import Interval, Integral, WindowInterval, WindowOperator
 from simplemonitor.mrl.functions import Polynomial
 from simplemonitor.mrl.notifiers import IntervalNotifier
 
@@ -145,23 +145,23 @@ class IntegralNode(IntervalNotifier):
         self.window.add(interval)
 
 
-class MinNode(IntervalNotifier):
-    def __init__(self, window: WindowInterval):
-        super().__init__()
-        window.to(self)
-        self.window = window
-        self.min = Min()
-
-    def add(self, interval: Interval):
-        self.min.add(interval)
-
-    def move(self, removed: Interval, added: Interval):
-        results = self.min.move(removed, added)
-        for result in results:
-            self.notify(result)
-
-    def receive(self, interval: Interval):
-        self.window.add(interval)
+# class MinNode(IntervalNotifier):
+#     def __init__(self, window: WindowInterval):
+#         super().__init__()
+#         window.to(self)
+#         self.window = window
+#         self.min = Min()
+#
+#     def add(self, interval: Interval):
+#         self.min.add(interval)
+#
+#     def move(self, removed: Interval, added: Interval):
+#         results = self.min.move(removed, added)
+#         for result in results:
+#             self.notify(result)
+#
+#     def receive(self, interval: Interval):
+#         self.window.add(interval)
 
 
 class ShiftNode(IntervalNotifier):
@@ -191,3 +191,18 @@ class HigherThanNode(IntervalNotifier):
         filtered_intervals = interval.higher_than(self.threshold)
         for filtered_interval in filtered_intervals:
             self.notify(filtered_interval)
+
+
+class AndNode(BinaryNode):
+    def __init__(self):
+        super().__init__(max)
+
+
+class OrNode(BinaryNode):
+    def __init__(self):
+        super().__init__(min)
+
+
+class NotNode(UnaryNode):
+    def __init__(self):
+        super().__init__(lambda value: -value)
