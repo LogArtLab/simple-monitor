@@ -1,8 +1,9 @@
 # INTERVAL
+from unittest.mock import MagicMock
 
 from simplemonitor.mrl.elements import Interval, WindowInterval
 from simplemonitor.mrl.functions import Polynomial
-from simplemonitor.mrl.nodes import IntegralNode, UnaryNode, BinaryNode
+from simplemonitor.mrl.nodes import IntegralNode, UnaryNode, BinaryNode, ShiftNode
 
 
 # INTEGRALNODE TESTS
@@ -48,3 +49,14 @@ def test_binary_node_receive():
     expected_signal = [Interval(1, 4, Polynomial.linear(2, 6)), Interval(4, 5, Polynomial.linear(1, 5)),
                        Interval(5, 6, Polynomial.linear(1, 5))]
     assert expected_signal == actual_signal
+
+
+# SHIFT NODE
+def test_shift_node_receive():
+    mock_notifier = MagicMock()
+    shift_node = ShiftNode(2.5)
+    shift_node.to(mock_notifier)
+
+    shift_node.receive(Interval(1, 2, Polynomial.linear(1, 1)))
+
+    mock_notifier.assert_called_once_with(Interval(3.5, 4.5, Polynomial.linear(1, -1.5)))

@@ -184,6 +184,23 @@ def test_integral_move_with_linear_and_zeros():
     assert result[1] == Interval(5 / 11, 1, Polynomial.full(-5.5, 5, 10))
 
 
+def test_intrval_move_above():
+    first = Interval(0, 1, Polynomial.linear(1, 1))
+    second = Interval(3, 4, Polynomial.linear(1, 5))
+
+    first_moved = first.move_above(second)
+
+    assert first_moved == Interval(3, 4, Polynomial.linear(1, -2))
+
+
+def test_interval_shift():
+    interval = Interval(0, 1, Polynomial.linear(1, 1))
+
+    shifted_interval = interval.shift(2)
+
+    assert shifted_interval == Interval(2, 3, Polynomial.linear(1, -1))
+
+
 # WINDOW INTERVAL
 def test_window_interval():
     window_interval = WindowInterval(1.0)

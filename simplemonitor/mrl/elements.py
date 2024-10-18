@@ -52,7 +52,10 @@ class Interval:
 
     def move_above(self, interval: 'Interval'):
         delta = self.start - interval.start
-        return Interval(interval.start, interval.end, self.function.move(delta))
+        return Interval(interval.start, interval.end, self.function.add_to_x(delta))
+
+    def shift(self, delta: float):
+        return Interval(self.start + delta, self.end + delta, self.function.add_to_x(-delta))
 
     def project_onto(self, other: 'Interval'):
         if self.start > other.start or self.end < other.end:
@@ -114,7 +117,7 @@ class Interval:
             min_interval.append(Interval(extended_zeros[i], extended_zeros[i + 1], function))
         return min_interval
 
-    def max_interval(self, other): #TODO: unify with min interval
+    def max_interval(self, other):  # TODO: unify with min interval
         if (self.start, self.end) != (other.start, other.end):
             raise Exception("Cannot compute the maximum interval of intervals with different bounds")
         self_left_value, self_right_value = self.get_extreme_value()
@@ -142,33 +145,32 @@ class Interval:
             min_interval.append(Interval(extended_zeros[i], extended_zeros[i + 1], function))
         return min_interval
 
-
-    def min_interval_old(self, other) -> List['Interval']:
-        if (self.start, self.end) != (other.start, other.end):
-            raise Exception("Cannot apply binary operator between intervals with different bounds")
-        self_extreme = self.get_extreme_value()
-        other_extreme = other.get_extreme_value()
-        zeros = self.zeros(other)
-        if not zeros:
-            if self_extreme[0] <= other_extreme[0]:
-                return [self, ]
-            else:
-                return [other, ]
-        min_interval = list()
-        if self.start != zeros[0]:
-            extended_zeros = [self.start, ] + zeros
-        else:
-            extended_zeros = zeros
-        if self.end != zeros[-1]:
-            extended_zeros = extended_zeros + [self.end, ]
-        functions = [self.function, other.function]
-        if self_extreme[0] <= other_extreme[0]:
-            for i in range(len(extended_zeros) - 1):
-                min_interval.append(Interval(extended_zeros[i], extended_zeros[i + 1], functions[i % 2]))
-        else:
-            for i in range(len(extended_zeros) - 1):
-                min_interval.append(Interval(extended_zeros[i], extended_zeros[i + 1], functions[(i + 1) % 2]))
-        return min_interval
+    # def min_interval_old(self, other) -> List['Interval']:
+    #     if (self.start, self.end) != (other.start, other.end):
+    #         raise Exception("Cannot apply binary operator between intervals with different bounds")
+    #     self_extreme = self.get_extreme_value()
+    #     other_extreme = other.get_extreme_value()
+    #     zeros = self.zeros(other)
+    #     if not zeros:
+    #         if self_extreme[0] <= other_extreme[0]:
+    #             return [self, ]
+    #         else:
+    #             return [other, ]
+    #     min_interval = list()
+    #     if self.start != zeros[0]:
+    #         extended_zeros = [self.start, ] + zeros
+    #     else:
+    #         extended_zeros = zeros
+    #     if self.end != zeros[-1]:
+    #         extended_zeros = extended_zeros + [self.end, ]
+    #     functions = [self.function, other.function]
+    #     if self_extreme[0] <= other_extreme[0]:
+    #         for i in range(len(extended_zeros) - 1):
+    #             min_interval.append(Interval(extended_zeros[i], extended_zeros[i + 1], functions[i % 2]))
+    #     else:
+    #         for i in range(len(extended_zeros) - 1):
+    #             min_interval.append(Interval(extended_zeros[i], extended_zeros[i + 1], functions[(i + 1) % 2]))
+    #     return min_interval
 
 
 class Memory:
@@ -385,7 +387,8 @@ class Min(WindowOperator):
     #     if self.min == removed_left and min(added_left, added_right) < self.min < max(added_left, added_right):
     #         pass
 
-class Max(WindowOperator):  #TODO: unify with min operator
+
+class Max(WindowOperator):  # TODO: unify with min operator
 
     def __init__(self):
         self.max = -float('inf')

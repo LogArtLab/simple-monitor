@@ -51,7 +51,7 @@ class Polynomial:
         else:
             raise Exception("not possible")
 
-    def move(self, delta) -> 'Polynomial':
+    def add_to_x(self, delta) -> 'Polynomial':
         return Polynomial(self.a, 2 * self.a * delta + self.b, self.a * delta * delta + self.b * delta + self.c)
 
     def zeros(self) -> List:
@@ -95,7 +95,7 @@ class UndefinedFunction(Polynomial):
     def integral(self) -> 'Polynomial':
         return UndefinedFunction()
 
-    def move(self, delta) -> 'Polynomial':
+    def add_to_x(self, delta) -> 'Polynomial':
         return UndefinedFunction()
 
     def zeros(self) -> Tuple[float | None, ...]:

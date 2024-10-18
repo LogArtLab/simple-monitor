@@ -162,3 +162,12 @@ class MinNode(IntervalNotifier):
 
     def receive(self, interval: Interval):
         self.window.add(interval)
+
+
+class ShiftNode(IntervalNotifier):
+    def __init__(self, delta: float):
+        super().__init__()
+        self.delta = delta
+
+    def receive(self, interval: Interval):
+        self.notify(interval.shift(self.delta))
