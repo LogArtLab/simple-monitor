@@ -3,7 +3,7 @@ from unittest.mock import MagicMock, call
 
 import pytest
 
-from simplemonitor.mrl.elements import Interval, Integral, Memory, Min, WindowInterval
+from simplemonitor.mrl.elements import Interval, Integral, Memory, Min, WindowInterval, Max
 from simplemonitor.mrl.functions import Polynomial
 from simplemonitor.mrl.nodes import UnaryNode, BinaryNode, NaryNode
 from simplemonitor.mrl.utility import mean_polynomial
@@ -239,7 +239,7 @@ def test_memory_receive_with_nary_node():
 
 
 # TEST MIN
-def test_move_with_constants():
+def test_min_move_with_constants():
     min_operator = Min()
     first_interval = Interval(1, 2, Polynomial.constant(4))
     second_interval = Interval(2, 3, Polynomial.constant(3))
@@ -252,7 +252,7 @@ def test_move_with_constants():
     assert minimum == [Interval(1, 2, Polynomial.constant(2)), ]
 
 
-def test_move_with_functions():
+def test_min_move_with_functions():
     min_operator = Min()
     first_interval = Interval(1, 2, Polynomial.linear(1, 1))
     second_interval = Interval(2, 3, Polynomial.constant(1.5))
@@ -267,7 +267,7 @@ def test_move_with_functions():
     assert minimum == [Interval(1, 2, Polynomial.constant(1)), ]
 
 
-def test_move_with_functions_version():
+def test_min_move_with_functions_version():
     min_operator = Min()
     first_interval = Interval(1, 2, Polynomial.linear(1, 1))
     second_interval = Interval(2, 3, Polynomial.constant(1.5))
@@ -280,7 +280,7 @@ def test_move_with_functions_version():
     assert minimum == [Interval(1, 2, Polynomial.constant(1)), ]
 
 
-def test_move_with_functions_and_zeros():
+def test_min_move_with_functions_and_zeros():
     min_operator = Min()
     first_interval = Interval(1, 2, Polynomial.linear(1, 1))
     second_interval = Interval(2, 3, Polynomial.constant(2.7))
@@ -293,7 +293,7 @@ def test_move_with_functions_and_zeros():
     assert minimum == [Interval(1, 1.7, Polynomial.linear(1, 1)), Interval(1.7, 2.0, Polynomial.constant(2.7))]
 
 
-def test_move_with_window_1():
+def test_min_move_with_window_1():
     min_operator = Min()
     first_interval = Interval(0, 1, Polynomial.linear(-1, 1))
     second_interval = Interval(1, 2, Polynomial.constant(0))
@@ -304,3 +304,71 @@ def test_move_with_window_1():
     assert min_operator.move(first_interval, second_interval) == [Interval(0, 1, Polynomial.constant(0))]
     assert min_operator.move(second_interval, third_interval) == [Interval(1, 2, Polynomial.constant(0))]
     assert min_operator.move(third_interval, fourth_interval) == [Interval(2, 3, Polynomial.linear(1, -2))]
+
+
+# TEST MAX
+def test_max_move_with_constants():
+    max_operator = Max()
+    first_interval = Interval(1, 2, Polynomial.constant(2))
+    second_interval = Interval(2, 3, Polynomial.constant(3))
+    third_interval = Interval(3, 4, Polynomial.constant(4))
+    max_operator.add(first_interval)
+    max_operator.add(second_interval)
+
+    maximum = max_operator.move(first_interval, third_interval)
+
+    assert maximum == [Interval(1, 2, Polynomial.constant(4)), ]
+
+
+def test_max_move_with_functions():
+    max_operator = Max()
+    first_interval = Interval(1, 2, Polynomial.linear(1, 1))
+    second_interval = Interval(2, 3, Polynomial.constant(1.5))
+    third_interval = Interval(3, 4, Polynomial.constant(3))
+    fourth_interval = Interval(4, 5, Polynomial.constant(2))
+    max_operator.add(first_interval)
+    max_operator.add(second_interval)
+    max_operator.add(third_interval)
+
+    maximum = max_operator.move(first_interval, fourth_interval)
+
+    assert maximum == [Interval(1, 2, Polynomial.constant(3)), ]
+
+
+def test_max_move_with_functions_version():
+    max_operator = Max()
+    first_interval = Interval(1, 2, Polynomial.linear(1, 1))
+    second_interval = Interval(2, 3, Polynomial.constant(1.5))
+    third_interval = Interval(3, 4, Polynomial.constant(3))
+    max_operator.add(first_interval)
+    max_operator.add(second_interval)
+
+    maximum = max_operator.move(first_interval, third_interval)
+
+    assert maximum == [Interval(1, 2, Polynomial.constant(3)), ]
+
+
+def test_max_move_with_functions_and_zeros():
+    max_operator = Max()
+    first_interval = Interval(1, 2, Polynomial.linear(-1, 4))
+    second_interval = Interval(2, 3, Polynomial.constant(2))
+    third_interval = Interval(3, 4, Polynomial.constant(2.7))
+    max_operator.add(first_interval)
+    max_operator.add(second_interval)
+
+    maximum = max_operator.move(first_interval, third_interval)
+
+    assert maximum == [Interval(1, 1.3, Polynomial.linear(-1, 4)), Interval(1.3, 2.0, Polynomial.constant(2.7))]
+
+
+def test_max_move_with_window_1():
+    max_operator = Max()
+    first_interval = Interval(0, 1, Polynomial.linear(-1, 1))
+    second_interval = Interval(1, 2, Polynomial.constant(0))
+    third_interval = Interval(2, 3, Polynomial.linear(1, -2))
+    fourth_interval = Interval(3, 4, Polynomial.constant(1))
+    max_operator.add(first_interval)
+
+    assert max_operator.move(first_interval, second_interval) == [Interval(0, 1, Polynomial.linear(-1, 1))]
+    assert max_operator.move(second_interval, third_interval) == [Interval(1, 2, Polynomial.linear(1, -1))]
+    assert max_operator.move(third_interval, fourth_interval) == [Interval(2, 3, Polynomial.constant(1))]
