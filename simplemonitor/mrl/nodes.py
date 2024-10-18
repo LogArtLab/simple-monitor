@@ -41,11 +41,11 @@ class BinaryNode(IntervalNotifier):
             left_left, left_right = left.split(right.end - left.start)
             self.left[0] = left_right
             self.right.pop(0)
-            self.notify(right.apply_binary_operator(self.operator, left_left))
+            self.notify(left_left.apply_binary_operator(self.operator, right))
         else:
             self.left.pop(0)
             self.right.pop(0)
-            self.notify(right.apply_binary_operator(self.operator, left))
+            self.notify(left.apply_binary_operator(self.operator, right))
 
     def receive_left(self, interval: 'Interval'):
         self.left.append(interval)
@@ -171,3 +171,23 @@ class ShiftNode(IntervalNotifier):
 
     def receive(self, interval: Interval):
         self.notify(interval.shift(self.delta))
+
+
+class FilterNode(BinaryNode):
+
+    def __init__(self):
+        operator = lambda signal, filter_signal: signal if filter_signal == Polynomial.constant(
+            1) else Polynomial.undefined()
+        super().__init__(operator)
+
+
+class HigherThanNode(IntervalNotifier):
+
+    def __init__(self, threshold):
+        super().__init__()
+        self.threshold = threshold
+
+    def receive(self, interval: Interval):
+        filtered_intervals = interval.higher_than(self.threshold)
+        for filtered_interval in filtered_intervals:
+            self.notify(filtered_interval)

@@ -145,6 +145,27 @@ class Interval:
             min_interval.append(Interval(extended_zeros[i], extended_zeros[i + 1], function))
         return min_interval
 
+    def higher_than(self, threshold: float):  # TODO: unify with min interval
+        interval = Interval(self.start, self.end, Polynomial.constant(threshold))
+        zeros = self.zeros(interval)
+        if not zeros:
+            return [Interval(self.start, self.end,
+                             Polynomial.constant(int(self.function(self.start) > threshold))), ]
+        extended_zeros = []
+        if self.start not in zeros:
+            extended_zeros += [self.start, ] + zeros
+        else:
+            extended_zeros.extend(zeros)
+        if self.end not in zeros:
+            extended_zeros.append(self.end)
+        filtered_interval = []
+        for i in range(len(extended_zeros) - 1):
+            mid_point = (extended_zeros[i] + extended_zeros[i + 1]) / 2
+            filtered_interval.append(
+                Interval(extended_zeros[i], extended_zeros[i + 1],
+                         Polynomial.constant(int(self.function(mid_point) > threshold))))
+        return filtered_interval
+
     # def min_interval_old(self, other) -> List['Interval']:
     #     if (self.start, self.end) != (other.start, other.end):
     #         raise Exception("Cannot apply binary operator between intervals with different bounds")

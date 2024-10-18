@@ -137,6 +137,29 @@ def test_min_interval_is_commutative():
     assert min_interval_from_left == min_interval_from_right
 
 
+def test_interval_higher_than_with_linear_function():
+    interval = Interval(-1, 1, Polynomial.linear(1, 0))
+
+    result_intervals = interval.higher_than(0)
+
+    assert result_intervals == [
+        Interval(-1, 0, Polynomial.constant(0)),
+        Interval(0, 1, Polynomial.constant(1))
+    ]
+
+
+def test_interval_higher_than_with_full_polynomial_function():
+    interval = Interval(-2, 2, Polynomial.full(1, 0, -1))
+
+    result_intervals = interval.higher_than(0)
+
+    assert result_intervals == [
+        Interval(-2, -1, Polynomial.constant(1)),
+        Interval(-1, 1, Polynomial.constant(0)),
+        Interval(1, 2, Polynomial.constant(1)),
+    ]
+
+
 # INTEGRAL TESTS
 def test_integral_move_with_constant():
     integral = Integral()
