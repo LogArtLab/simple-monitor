@@ -3,7 +3,7 @@ from unittest.mock import MagicMock, call
 
 import pytest
 
-from simplemonitor.mrl.elements import Interval, Integral, Memory, Min, WindowInterval, Max
+from simplemonitor.mrl.elements import Interval, Integral, Memory, Min, WindowInterval, Max, Intervals
 from simplemonitor.mrl.functions import Polynomial
 from simplemonitor.mrl.nodes import UnaryNode, BinaryNode, NaryNode
 from simplemonitor.mrl.utility import mean_polynomial
@@ -253,6 +253,31 @@ def test_window_interval():
     mock_observer.move.assert_has_calls(move_calls)
 
 
+def test_window_interval_simple():
+    window_interval = WindowInterval(2.0)
+    mock_observer = MagicMock()
+    window_interval.to(mock_observer)
+    first_interval = Interval(0, 2.5, Polynomial.constant(0))
+    second_interval = Interval(2.5, 3, Polynomial.constant(1))
+    third_interval = Interval(3, 5.0, Polynomial.constant(2))
+
+    window_interval.add(first_interval)
+    window_interval.add(second_interval)
+    window_interval.add(third_interval)
+
+    add_calls = [
+        call(Interval(0.0, 2.0, Polynomial.constant(0))),
+    ]
+    move_calls = [
+        call(Interval(0.0, 0.5, Polynomial.constant(0)), Interval(2.0, 2.5, Polynomial.constant(0))),
+        call(Interval(0.5, 1.0, Polynomial.constant(0)), Interval(2.5, 3.0, Polynomial.constant(1))),
+        call(Interval(1.0, 2.5, Polynomial.constant(0)), Interval(3.0, 4.5, Polynomial.constant(2))),
+        call(Interval(2.5, 3.0, Polynomial.constant(1)), Interval(4.5, 5.0, Polynomial.constant(2))),
+    ]
+    mock_observer.add.assert_has_calls(add_calls)
+    mock_observer.move.assert_has_calls(move_calls)
+
+
 # MEMORY TESTS
 def test_memory_receive():
     memory = Memory()
@@ -412,3 +437,50 @@ def test_max_move_with_window_1():
     assert max_operator.move(first_interval, second_interval) == [Interval(0, 1, Polynomial.linear(-1, 1))]
     assert max_operator.move(second_interval, third_interval) == [Interval(1, 2, Polynomial.linear(1, -1))]
     assert max_operator.move(third_interval, fourth_interval) == [Interval(2, 3, Polynomial.constant(1))]
+
+
+# TEST INTERVALS
+
+def test_intervals_append():
+    intervals = Intervals()
+    interval = Interval(0, 1, Polynomial.undefined())
+
+    intervals.append(interval)
+
+    assert intervals.get_first() == interval
+
+
+def test_intervals_get_first():
+    intervals = Intervals()
+    interval = Interval(0, 1, Polynomial.undefined())
+
+    intervals.append(interval)
+    intervals.append(Interval(3, 10, Polynomial.constant(0)))
+
+    assert intervals.get_first() == interval
+
+
+def test_intervals_remove_first():
+    intervals = Intervals()
+    first_interval = Interval(0, 1, Polynomial.undefined())
+    second_interval = Interval(1, 10, Polynomial.constant(0))
+    intervals.append(first_interval)
+    intervals.append(second_interval)
+
+    removed = intervals.remove_first()
+
+    assert removed == first_interval
+    assert intervals.get_first() == second_interval
+
+
+def test_intervals_replace_first():
+    intervals = Intervals()
+    interval = Interval(0, 1, Polynomial.undefined())
+    replaced = Interval(0, 1, Polynomial.constant(20))
+    intervals.append(interval)
+
+    intervals.replace_first(replaced)
+
+    assert intervals.get_first() == replaced
+
+

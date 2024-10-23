@@ -10,6 +10,105 @@ def are_numerically_equivalent(a, b):
     return abs(a - b) < EPS
 
 
+class IntervalValued: # TODO: add tests
+
+    def __init__(self, left_extreme, right_extreme):
+        self.left_extreme = left_extreme
+        self.right_extreme = right_extreme
+
+    def left_subset(self, other):
+        return other.left_extreme == self.left_extreme and self.right_extreme[0] < other.right_extreme[0]
+
+    def left_minus(self, other):
+        return IntervalValued(other.right_extreme, self.right_extreme)
+
+    def get_value(self, operator):
+        return operator(self.left_extreme[1], self.right_extreme[1])
+
+    def __eq__(self, other):
+        return self.left_extreme == other.left_extreme and self.right_extreme == other.right_extreme
+
+    def is_prolong_of(self, other):
+        return self.left_extreme[0] == other.right_extreme[0] and self.left_extreme[1] == self.right_extreme[1] == \
+            other.right_extreme[1]
+
+    def join(self, other):
+        return IntervalValued(self.left_extreme, other.right_extreme)
+
+
+class IntervalQueue:
+
+    def __init__(self):
+        self.intervals = []
+
+    def add(self, first, second):
+        interval = IntervalValued(first, second)
+        if self.is_full() and interval.is_prolong_of(self.intervals[-1]):
+            self.intervals[-1] = self.intervals[0].join(interval)
+        else:
+            self.intervals.append(interval)
+
+    def remove(self, first, second):
+        to_be_removed_interval = IntervalValued(first, second)
+        if self.intervals[0] == to_be_removed_interval:
+            self.intervals.pop(0)
+            return
+        if not to_be_removed_interval.left_subset(self.intervals[0]):
+            raise Exception("ERROR")
+        self.intervals[0] = self.intervals[0].left_minus(to_be_removed_interval)
+
+    def is_full(self):
+        return len(self.intervals) > 0
+
+    def evaluate(self, operator):
+        return operator([interval.get_value(operator) for interval in self.intervals])
+
+
+class TimedQueue:
+
+    def __init__(self):
+        self.values = []
+
+    def __add_last_element(self, element):
+        last_element = self.values[-1]
+        if len(self.values) > 1 and last_element[1] == element[1]:
+            self.values[-1] = (element[0], last_element[1])
+        else:
+            self.values.append(element)
+
+    def add(self, first, second):
+        if first[0] > second[0]:
+            raise Exception("First element cannot follow second element!")
+        if not self.values:
+            self.values.append(first)
+        else:
+            self.__add_last_element(first)
+        self.__add_last_element(second)
+        print()
+
+    def remove(self, first, second):
+        fist_value = self.values.pop(0)
+        if first != fist_value:
+            raise Exception("The first element to remove should be in storage!")
+        fist_value = self.values[0]
+        if fist_value == second:
+            self.values.pop(0)
+        else:
+            if second[0] < fist_value[0]:
+                self.values.insert(0, second)
+            else:
+                raise Exception("The second element to remove cannot be higher than the first in the storage!")
+
+    def min(self):
+        return min([value[1] for value in self.values])
+
+    def max(self):
+        return max([value[1] for value in self.values])
+
+    def is_full(self):
+        return len(self.values) > 0
+
+
 class Interval:
 
     def __init__(self, start: float, end: float, function: Polynomial):
@@ -76,6 +175,9 @@ class Interval:
 
     def get_extreme_value(self) -> Tuple[float, float]:
         return self.function(self.start), self.function(self.end)
+
+    def get_extreme_value_with_time(self) -> Tuple[Tuple[float, float], Tuple[float, float]]:
+        return (self.start, self.function(self.start)), (self.end, self.function(self.end))
 
     def is_increasing(self):
         left_value, right_value = self.get_extreme_value()
@@ -166,33 +268,6 @@ class Interval:
                          Polynomial.constant(int(self.function(mid_point) > threshold))))
         return filtered_interval
 
-    # def min_interval_old(self, other) -> List['Interval']:
-    #     if (self.start, self.end) != (other.start, other.end):
-    #         raise Exception("Cannot apply binary operator between intervals with different bounds")
-    #     self_extreme = self.get_extreme_value()
-    #     other_extreme = other.get_extreme_value()
-    #     zeros = self.zeros(other)
-    #     if not zeros:
-    #         if self_extreme[0] <= other_extreme[0]:
-    #             return [self, ]
-    #         else:
-    #             return [other, ]
-    #     min_interval = list()
-    #     if self.start != zeros[0]:
-    #         extended_zeros = [self.start, ] + zeros
-    #     else:
-    #         extended_zeros = zeros
-    #     if self.end != zeros[-1]:
-    #         extended_zeros = extended_zeros + [self.end, ]
-    #     functions = [self.function, other.function]
-    #     if self_extreme[0] <= other_extreme[0]:
-    #         for i in range(len(extended_zeros) - 1):
-    #             min_interval.append(Interval(extended_zeros[i], extended_zeros[i + 1], functions[i % 2]))
-    #     else:
-    #         for i in range(len(extended_zeros) - 1):
-    #             min_interval.append(Interval(extended_zeros[i], extended_zeros[i + 1], functions[(i + 1) % 2]))
-    #     return min_interval
-
 
 class Memory:
 
@@ -232,11 +307,34 @@ class Memory:
         node.to(lambda interval: self.receive(to_variable, interval))
 
 
+class Intervals:
+
+    def __init__(self):
+        self.intervals = []
+
+    def append(self, interval: 'Interval'):
+        if len(self.intervals) > 0:
+            last_interval = self.intervals[-1]
+            if last_interval.function == interval.function:
+                self.intervals[-1] = Interval(last_interval.start, interval.end, last_interval.function)
+                return
+        self.intervals.append(interval)
+
+    def get_first(self):
+        return self.intervals[0]
+
+    def remove_first(self):
+        return self.intervals.pop(0)
+
+    def replace_first(self, interval: Interval):
+        self.intervals[0] = interval
+
+
 class WindowInterval(WindowIntervalNotifier):
 
     def __init__(self, length):
         super().__init__()
-        self.intervals = []
+        self.intervals = Intervals()
         self.acc_length = 0
         self.right_interval = None
         self.length = length
@@ -261,23 +359,24 @@ class WindowInterval(WindowIntervalNotifier):
             self.__move()
 
     def __move(self):
-        left_interval = self.intervals[0]
+        left_interval = self.intervals.get_first()
         left_interval_length = left_interval.length()
         right_interval_length = self.right_interval.length()
         right_minus_left_length = right_interval_length - left_interval_length
         if right_minus_left_length > 0:
             to_be_added, self.right_interval = self.right_interval.split(left_interval_length)
-            to_be_removed = self.intervals.pop(0)
+            to_be_removed = self.intervals.remove_first()
             self.intervals.append(to_be_added)
             self.notify_move(to_be_removed, to_be_added)
         elif right_minus_left_length == 0:
             to_be_added = self.right_interval
-            to_be_removed = self.intervals.pop(0)
+            to_be_removed = self.intervals.remove_first()
             self.right_interval = None
             self.intervals.append(to_be_added)
             self.notify_move(to_be_removed, to_be_added)
         else:
-            to_be_removed, self.intervals[0] = left_interval.split(right_interval_length)
+            to_be_removed, to_replace_first_of_intervals = left_interval.split(right_interval_length)
+            self.intervals.replace_first(to_replace_first_of_intervals)
             to_be_added = self.right_interval
             self.right_interval = None
             self.intervals.append(to_be_added)
@@ -325,18 +424,20 @@ class Integral(WindowOperator):
 class Min(WindowOperator):
 
     def __init__(self):
-        self.min = float('inf')
-        self.values = []
+        self.values = IntervalQueue()
 
     def add(self, interval: Interval):
-        new_values = interval.get_extreme_value()
-        self.values.append(new_values[0])
-        self.values.append(new_values[1])
-        self.min = min(self.min, min(new_values))
+        new_values = interval.get_extreme_value_with_time()
+        self.values.add(new_values[0], new_values[1])
+
+    def remove(self, removed):
+        to_be_removed = removed.get_extreme_value_with_time()
+        self.values.remove(to_be_removed[0], to_be_removed[1])
 
     def move(self, removed: Interval, added: Interval):
-        if len(self.values) > 2:
-            other_minimum = min(self.values[2:])
+        self.remove(removed)
+        if self.values.is_full():
+            other_minimum = self.values.evaluate(min)
             constant_interval = Interval(removed.start, removed.end, Polynomial.constant(other_minimum))
             first_chunk_intervals = removed.min_interval(constant_interval)
         else:
@@ -345,6 +446,7 @@ class Min(WindowOperator):
         added_shifted = added.move_above(removed)
         for interval in first_chunk_intervals:
             min_intervals.extend(interval.min_interval(added_shifted.project_onto(interval)))
+        self.add(added)
         return min_intervals
 
     # def move_old(self, removed: Interval, added: Interval):
@@ -409,27 +511,55 @@ class Min(WindowOperator):
     #         pass
 
 
-class Max(WindowOperator):  # TODO: unify with min operator
+# class Max(WindowOperator):  # TODO: unify with min operator
+#
+#     def __init__(self):
+#         self.max = -float('inf')
+#         self.values = []
+#
+#     def add(self, interval: Interval):
+#         new_values = interval.get_extreme_value()
+#         self.values.append(new_values[0])
+#         self.values.append(new_values[1])
+#         self.max = max(self.max, max(new_values))
+#
+#     def move(self, removed: Interval, added: Interval):
+#         if len(self.values) > 2:
+#             other_maximum = max(self.values[2:])
+#             constant_interval = Interval(removed.start, removed.end, Polynomial.constant(other_maximum))
+#             first_chunk_intervals = removed.max_interval(constant_interval)
+#         else:
+#             first_chunk_intervals = [removed, ]
+#         min_intervals = []
+#         added_shifted = added.move_above(removed)
+#         for interval in first_chunk_intervals:
+#             min_intervals.extend(interval.max_interval(added_shifted.project_onto(interval)))
+#         return min_intervals
+
+class Max(WindowOperator):
 
     def __init__(self):
-        self.max = -float('inf')
-        self.values = []
+        self.values = IntervalQueue()
 
     def add(self, interval: Interval):
-        new_values = interval.get_extreme_value()
-        self.values.append(new_values[0])
-        self.values.append(new_values[1])
-        self.max = max(self.max, max(new_values))
+        new_values = interval.get_extreme_value_with_time()
+        self.values.add(new_values[0], new_values[1])
+
+    def remove(self, removed):
+        to_be_removed = removed.get_extreme_value_with_time()
+        self.values.remove(to_be_removed[0], to_be_removed[1])
 
     def move(self, removed: Interval, added: Interval):
-        if len(self.values) > 2:
-            other_maximum = max(self.values[2:])
+        self.remove(removed)
+        if self.values.is_full():
+            other_maximum = self.values.evaluate(max)
             constant_interval = Interval(removed.start, removed.end, Polynomial.constant(other_maximum))
             first_chunk_intervals = removed.max_interval(constant_interval)
         else:
             first_chunk_intervals = [removed, ]
-        min_intervals = []
+        max_intervals = []
         added_shifted = added.move_above(removed)
         for interval in first_chunk_intervals:
-            min_intervals.extend(interval.max_interval(added_shifted.project_onto(interval)))
-        return min_intervals
+            max_intervals.extend(interval.max_interval(added_shifted.project_onto(interval)))
+        self.add(added)
+        return max_intervals

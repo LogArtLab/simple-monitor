@@ -3,7 +3,7 @@ from unittest.mock import MagicMock, call
 
 from simplemonitor.mrl.elements import Interval, WindowInterval
 from simplemonitor.mrl.functions import Polynomial
-from simplemonitor.mrl.nodes import IntegralNode, UnaryNode, BinaryNode, ShiftNode, FilterNode, HigherThanNode
+from simplemonitor.mrl.nodes import IntegralNode, UnaryNode, BinaryNode, ShiftNode, FilterNode, HigherThanNode, Globally
 
 
 # INTEGRALNODE TESTS
@@ -110,5 +110,68 @@ def test_receive_higher_than_node_with_multiple_outputs():
     calls = [
         call(Interval(-2, 0, Polynomial.constant(0))),
         call(Interval(0, 2, Polynomial.constant(1))),
+    ]
+    mock_observer.assert_has_calls(calls)
+
+
+# Globally Node
+def test_receive_globally_single():
+    globally_node = Globally(2)
+    mock_observer = MagicMock()
+    globally_node.to(mock_observer)
+
+    globally_node.receive(Interval(0, 2.5, Polynomial.true()))
+
+    calls = [
+        call(Interval(0, 0.5, Polynomial.true())),
+    ]
+    mock_observer.assert_has_calls(calls)
+
+
+def test_receive_globally_double():
+    globally_node = Globally(2)
+    mock_observer = MagicMock()
+    globally_node.to(mock_observer)
+
+    globally_node.receive(Interval(0, 2.5, Polynomial.true()))
+    globally_node.receive(Interval(2.5, 3.0, Polynomial.false()))
+
+    calls = [
+        call(Interval(0, 0.5, Polynomial.true())),
+        call(Interval(0.5, 1.0, Polynomial.false())),
+    ]
+    mock_observer.assert_has_calls(calls)
+
+
+def test_receive_globally():
+    globally_node = Globally(2)
+    mock_observer = MagicMock()
+    globally_node.to(mock_observer)
+
+    globally_node.receive(Interval(0, 0.5, Polynomial.false()))
+    globally_node.receive(Interval(0.5, 3.0, Polynomial.true()))
+
+    calls = [
+        call(Interval(0, 0.5, Polynomial.false())),
+        call(Interval(0.5, 1.0, Polynomial.true())),
+    ]
+    mock_observer.assert_has_calls(calls)
+
+
+def test_receive_globally_triple():
+    globally_node = Globally(2)
+    mock_observer = MagicMock()
+    globally_node.to(mock_observer)
+
+    globally_node.receive(Interval(0, 2.5, Polynomial.true()))
+    globally_node.receive(Interval(2.5, 3.0, Polynomial.false()))
+    globally_node.receive(Interval(3.0, 5.5, Polynomial.true()))
+
+    calls = [
+        call(Interval(0, 0.5, Polynomial.true())),
+        call(Interval(0.5, 1.0, Polynomial.false())),
+        call(Interval(1.0, 2.5, Polynomial.false())),
+        call(Interval(2.5, 3.0, Polynomial.false())),
+        call(Interval(3.0, 3.5, Polynomial.true())),
     ]
     mock_observer.assert_has_calls(calls)

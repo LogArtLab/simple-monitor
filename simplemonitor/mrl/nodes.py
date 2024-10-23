@@ -1,4 +1,4 @@
-from simplemonitor.mrl.elements import Interval, Integral, WindowInterval, WindowOperator
+from simplemonitor.mrl.elements import Interval, Integral, WindowInterval, WindowOperator, Max, Min
 from simplemonitor.mrl.functions import Polynomial
 from simplemonitor.mrl.notifiers import IntervalNotifier
 
@@ -206,3 +206,15 @@ class OrNode(BinaryNode):
 class NotNode(UnaryNode):
     def __init__(self):
         super().__init__(lambda value: -value)
+
+
+class Finally(WindowNode):
+
+    def __init__(self, length):
+        super().__init__(WindowInterval(length), Max())
+
+
+class Globally(WindowNode):
+
+    def __init__(self, length):
+        super().__init__(WindowInterval(length), Min())

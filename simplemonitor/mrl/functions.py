@@ -26,6 +26,14 @@ class Polynomial:
     def full(a: numbers.Number, b: numbers.Number, c: numbers.Number) -> 'Polynomial':
         return Polynomial(a, b, c)
 
+    @staticmethod
+    def true() -> 'Polynomial':
+        return Polynomial(0, 0, 1)
+
+    @staticmethod
+    def false() -> 'Polynomial':
+        return Polynomial(0, 0, 0)
+
     def __call__(self, x):
         return self.a * x * x + self.b * x + self.c
 
