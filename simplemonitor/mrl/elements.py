@@ -1,8 +1,10 @@
+from collections import namedtuple
 from typing import Tuple, List
 
 from simplemonitor.mrl.functions import Polynomial
 from simplemonitor.mrl.notifiers import WindowIntervalNotifier
 
+TimedValue = namedtuple('TimedValue', ['time', 'value'])
 EPS = 1e-5
 
 
@@ -10,41 +12,43 @@ def are_numerically_equivalent(a, b):
     return abs(a - b) < EPS
 
 
-class IntervalValued: # TODO: add tests
+class IntervalValued:
 
-    def __init__(self, left_extreme, right_extreme):
+    def __init__(self, left_extreme: TimedValue, right_extreme: TimedValue):
         self.left_extreme = left_extreme
         self.right_extreme = right_extreme
 
-    def left_subset(self, other):
-        return other.left_extreme == self.left_extreme and self.right_extreme[0] < other.right_extreme[0]
+    def is_left_subset(self, other):
+        return other.left_extreme == self.left_extreme and self.right_extreme.time < other.right_extreme.time
 
-    def left_minus(self, other):
+    def left_minus(self, other):  # TODO: add test for exception
+        if other.right_extreme > self.right_extreme:
+            raise Exception("other should be lower than self")
         return IntervalValued(other.right_extreme, self.right_extreme)
 
     def get_value(self, operator):
         return operator(self.left_extreme[1], self.right_extreme[1])
 
+    def is_prolong_of(self, other):
+        return self.left_extreme.time == other.right_extreme.time and self.left_extreme.value == self.right_extreme.value == \
+            other.right_extreme.value
+
+    def join_left_of(self, other):
+        return IntervalValued(self.left_extreme, other.right_extreme)
+
     def __eq__(self, other):
         return self.left_extreme == other.left_extreme and self.right_extreme == other.right_extreme
 
-    def is_prolong_of(self, other):
-        return self.left_extreme[0] == other.right_extreme[0] and self.left_extreme[1] == self.right_extreme[1] == \
-            other.right_extreme[1]
 
-    def join(self, other):
-        return IntervalValued(self.left_extreme, other.right_extreme)
-
-
-class IntervalQueue:
+class IntervalQueue:  # TODO: add tests
 
     def __init__(self):
         self.intervals = []
 
-    def add(self, first, second):
+    def add(self, first: TimedValue, second: TimedValue):
         interval = IntervalValued(first, second)
         if self.is_full() and interval.is_prolong_of(self.intervals[-1]):
-            self.intervals[-1] = self.intervals[0].join(interval)
+            self.intervals[-1] = self.intervals[0].join_left_of(interval)
         else:
             self.intervals.append(interval)
 
@@ -53,8 +57,8 @@ class IntervalQueue:
         if self.intervals[0] == to_be_removed_interval:
             self.intervals.pop(0)
             return
-        if not to_be_removed_interval.left_subset(self.intervals[0]):
-            raise Exception("ERROR")
+        if not to_be_removed_interval.is_left_subset(self.intervals[0]):
+            raise Exception("Cannot remove an interval that is not a left subset")
         self.intervals[0] = self.intervals[0].left_minus(to_be_removed_interval)
 
     def is_full(self):
@@ -176,8 +180,8 @@ class Interval:
     def get_extreme_value(self) -> Tuple[float, float]:
         return self.function(self.start), self.function(self.end)
 
-    def get_extreme_value_with_time(self) -> Tuple[Tuple[float, float], Tuple[float, float]]:
-        return (self.start, self.function(self.start)), (self.end, self.function(self.end))
+    def get_extreme_value_with_time(self) -> Tuple[TimedValue, TimedValue]:
+        return TimedValue(self.start, self.function(self.start)), TimedValue(self.end, self.function(self.end))
 
     def is_increasing(self):
         left_value, right_value = self.get_extreme_value()

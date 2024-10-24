@@ -3,7 +3,8 @@ from unittest.mock import MagicMock, call
 
 import pytest
 
-from simplemonitor.mrl.elements import Interval, Integral, Memory, Min, WindowInterval, Max, Intervals
+from simplemonitor.mrl.elements import Interval, Integral, Memory, Min, WindowInterval, Max, Intervals, IntervalValued, \
+    TimedValue
 from simplemonitor.mrl.functions import Polynomial
 from simplemonitor.mrl.nodes import UnaryNode, BinaryNode, NaryNode
 from simplemonitor.mrl.utility import mean_polynomial
@@ -484,3 +485,107 @@ def test_intervals_replace_first():
     assert intervals.get_first() == replaced
 
 
+# TESTS INTERVAL VALUED
+
+def test_left_subset_when_it_is_true():
+    first = TimedValue(1.0, 20)
+    second = TimedValue(2.0, 25)
+    third = TimedValue(3.0, 30)
+    interval_valued = IntervalValued(first, second)
+
+    left_subset = interval_valued.is_left_subset(IntervalValued(first, third))
+
+    assert left_subset is True
+
+
+def test_left_subset_when_it_is_false():
+    first = TimedValue(1.0, 20)
+    second = TimedValue(2.0, 25)
+    third = TimedValue(1.50, 30)
+    interval_valued = IntervalValued(first, second)
+
+    left_subset = interval_valued.is_left_subset(IntervalValued(first, third))
+
+    assert left_subset is False
+
+
+def test_left_subset_with_same_interval():
+    first = TimedValue(1.0, 20)
+    second = TimedValue(2.0, 25)
+    interval_valued = IntervalValued(first, second)
+
+    left_subset = interval_valued.is_left_subset(interval_valued)
+
+    assert left_subset is False
+
+
+def test_left_minus():
+    first = TimedValue(1.0, 20)
+    second = TimedValue(2.0, 25)
+    third = TimedValue(1.5, 30)
+    interval = IntervalValued(first, second)
+    to_be_removed_interval = IntervalValued(first, third)
+
+    left_subset = interval.left_minus(to_be_removed_interval)
+
+    assert left_subset == IntervalValued(third, second)
+
+
+def test_get_value():
+    first = TimedValue(1.0, 20)
+    second = TimedValue(2.0, 25)
+    interval = IntervalValued(first, second)
+
+    minimum = interval.get_value(min)
+
+    assert minimum == 20
+
+
+def test_is_prolong_of():
+    first = TimedValue(1.0, 20)
+    second = TimedValue(2.0, 25)
+    third = TimedValue(3.0, 25)
+    interval = IntervalValued(first, second)
+    prolong = IntervalValued(second, third)
+
+    prolong_of = prolong.is_prolong_of(interval)
+
+    assert prolong_of is True
+
+
+def test_is_not_a_prolong_because_of_not_constant_value():
+    first = TimedValue(1.0, 20)
+    second = TimedValue(2.0, 25)
+    third = TimedValue(3.0, 26)
+    interval = IntervalValued(first, second)
+    prolong = IntervalValued(second, third)
+
+    not_a_prolong_of = prolong.is_prolong_of(interval)
+
+    assert not_a_prolong_of is False
+
+
+def test_is_not_a_prolong_because_of_times():
+    first = TimedValue(1.0, 20)
+    second = TimedValue(2.0, 25)
+    third = TimedValue(3.0, 25)
+    fourth = TimedValue(4.0, 25)
+    interval = IntervalValued(first, second)
+    prolong = IntervalValued(third, fourth)
+
+    not_a_prolong_of = prolong.is_prolong_of(interval)
+
+    assert not_a_prolong_of is False
+
+
+def test_join():
+    first = TimedValue(1.0, 20)
+    second = TimedValue(2.0, 25)
+    third = TimedValue(2.0, 25)
+    fourth = TimedValue(4.0, 25)
+    interval = IntervalValued(first, second)
+    prolong = IntervalValued(third, fourth)
+
+    joined_interval = interval.join_left_of(prolong)
+
+    assert joined_interval == IntervalValued(first, fourth)
