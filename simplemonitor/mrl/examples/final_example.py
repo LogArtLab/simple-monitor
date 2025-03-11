@@ -1,7 +1,5 @@
-from simplemonitor.mrl.functions import Polynomial
-from simplemonitor.mrl.utility import mean_polynomial
-from simplemonitor.mrl.elements import Interval
 from simplemonitor.mrl.locations import World
+from simplemonitor.mrl.utility import mean_polynomial
 
 world = World()
 world.create_location("l1", {"P": 1})
